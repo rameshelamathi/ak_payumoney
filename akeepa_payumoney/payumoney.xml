@@ -14,8 +14,8 @@
 		<folder>paypal</folder>
 	</files>
 	<languages folder="language">
-		<language tag="en-GB">en-GB/en-GB.plg_akpayment_payumoney.ini</language>
-		<language tag="en-GB">en-GB/en-GB.plg_akpayment_payumoney.sys.ini</language>
+		<language tag="en-GB">en-GB.plg_akpayment_payumoney.ini</language>
+		<language tag="en-GB">en-GB.plg_akpayment_payumoney.sys.ini</language>
 	</languages>
 	<config>
 		<fields name="params">
