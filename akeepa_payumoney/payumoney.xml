@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<extension version="3.3.0" type="plugin" group="akpayment" method="upgrade">
+	<name>PayU Money</name>
+	<author>Ramesh</author>
+	<authorEmail>support@j2store.org</authorEmail>
+	<authorUrl>http://www.j2store.org</authorUrl>
+	<copyright>Copyright (c) 2015 Ramesh Elamathi</copyright>
+	<license>GNU General Public License version 3, or later</license>
+	<creationDate>September 2015</creationDate>
+	<version>1.0</version>
+	<description>PayU Money integration for Akeeba Subscriptions</description>
+	<files>
+		<filename plugin="payumoney">payumoney.php</filename>
+		<folder>paypal</folder>
+	</files>
+	<languages folder="language">
+		<language tag="en-GB">en-GB/en-GB.plg_akpayment_payumoney.ini</language>
+		<language tag="en-GB">en-GB/en-GB.plg_akpayment_payumoney.sys.ini</language>
+	</languages>
+	<config>
+		<fields name="params">
+			<fieldset name="basic">
+				<field name="title" type="text" size="50" default="" label="PLG_AKPAYMENT_PAYUMONEY_TITLE_LABEL" description="PLG_AKPAYMENT_PAYUMONEY_TITLE_DESC"/>
+				<field name="ppimage" type="text" size="50" default="" label="PLG_AKPAYMENT_PAYUMONEY_PPIMAGE_LABEL" description="PLG_AKPAYMENT_PAYUMONEY_PPIMAGE_DESC" />
+				<field type="spacer" />
+				<field name="surcharge" type="text" size="50" default="" label="PLG_AKPAYMENT_COMMON_SURCHARGE_LABEL" description="PLG_AKPAYMENT_COMMON_SURCHARGE_DESC"/>
+				<field type="spacer" />
+				<field name="merchant" type="text" size="50" default="" label="PLG_AKPAYMENT_PAYUMONEY_MERCHANT_LABEL" description="PLG_AKPAYMENT_PAYUMONEY_MERCHANT_DESC"/>
+				<field name="salt" type="text" size="50" default="" label="PLG_AKPAYMENT_PAYUMONEY_SALT_LABEL" description="PLG_AKPAYMENT_PAYUMONEY_SALT_DESC"/>
+				<field type="spacer" />
+				<field name="sandbox" type="radio" default="0" label="PLG_AKPAYMENT_PAYUMONEY_SANDBOX_LABEL" description="PLG_AKPAYMENT_PAYUMONEY_SANDBOX_DESC">
+				  <option value="0">JNo</option>
+				  <option value="1">JYes</option>
+				</field>
+				<field name="sandbox_merchant" type="text" size="50" default="" label="PLG_AKPAYMENT_PAYUMONEY_SANDBOX_MERCHANT_LABEL" description="PLG_AKPAYMENT_PAYUMONEY_SANDBOX_MERCHANT_LABEL"/>
+				<field name="sandbox_salt" type="text" size="50" default="" label="PLG_AKPAYMENT_PAYUMONEY_SANDBOX_SALT_LABEL" description="PLG_AKPAYMENT_PAYUMONEY_SANDBOX_SALT_LABEL"/>
+				<field type="spacer" />
+			
+				<field name="protocol" type="radio" default="keep" label="PLG_AKPAYMENT_PAYUMONEY_PROTOCOL_LABEL" description="PLG_AKPAYMENT_PAYUMONEY_PROTOCOL_DESC">
+				  <option value="keep">PLG_AKPAYMENT_PAYUMONEY_PROTOCOL_KEEP_LABEL</option>
+				  <option value="insecure">PLG_AKPAYMENT_PAYUMONEY_PROTOCOL_INSECURE_LABEL</option>
+				  <option value="secure">PLG_AKPAYMENT_PAYUMONEY_PROTOCOL_SECURE_LABEL</option>
+				</field>
+
+			</fieldset>
+		</fields>
+	</config>
+</extension>
