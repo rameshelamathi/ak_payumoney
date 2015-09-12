@@ -29,7 +29,7 @@ $t2 = JText::_('COM_AKEEBASUBS_LEVEL_REDIRECTING_BODY');
 	<input type="hidden" name="Pg" value="<?php echo $data->pg; ?>" />
 	<input type="hidden" name="service_provider" value="<?php echo $data->service_provider; ?>" />
 
-	<input type="button" value="<?php echo JText::_('PLG_AKPAYMENT_PAYUMONEY_PAY'); ?>" id="payumoneysubmit" />
+	<input type="submit" value="<?php echo JText::_('PLG_AKPAYMENT_PAYUMONEY_PAY'); ?>" id="payumoneysubmit" />
 	
 </form>
 </p>
