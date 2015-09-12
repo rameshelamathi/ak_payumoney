@@ -119,43 +119,22 @@ class plgAkpaymentPayumoney extends AkpaymentBase
 		{
 			return false;
 		}
-
+		
 		// Check IPN data for validity (i.e. protect against fraud attempt)
 		$isValid = $this->isValidIPN($data);
 
 		if (!$isValid)
 		{
-			$data['akeebasubs_failure_reason'] = 'PayPal reports transaction as invalid';
+			$data['akeebasubs_failure_reason'] = $data['error_Message'];
 		}
 
 		// Check txn_type; we only accept web_accept transactions with this plugin
 		$recurring = false;
 
-		if ($isValid)
-		{
-			// This is required to process some IPNs, such as Reversed and Canceled_Reversal
-			if (!array_key_exists('txn_type', $data))
-			{
-				$data['txn_type'] = 'workaround_to_missing_txn_type';
-			}
-
-			$validTypes = array('workaround_to_missing_txn_type', 'web_accept', 'recurring_payment', 'subscr_payment');
-			$isValid = in_array($data['txn_type'], $validTypes);
-
-			if (!$isValid)
-			{
-				$data['akeebasubs_failure_reason'] = "Transaction type " . $data['txn_type'] . " can't be processed by this payment plugin.";
-			}
-			else
-			{
-				$recurring = (!in_array($data['txn_type'], array('web_accept', 'workaround_to_missing_txn_type')));
-			}
-		}
-
 		// Load the relevant subscription row
 		if ($isValid)
 		{
-			$id = array_key_exists('custom', $data) ? (int)$data['custom'] : -1;
+			$id = array_key_exists('txnid', $data) ? (int)$data['txnid'] : -1;
 			$subscription = null;
 
 			if ($id > 0)
@@ -179,36 +158,15 @@ class plgAkpaymentPayumoney extends AkpaymentBase
 
 			if (!$isValid)
 			{
-				$data['akeebasubs_failure_reason'] = 'The referenced subscription ID ("custom" field) is invalid';
+				$data['akeebasubs_failure_reason'] = 'The referenced subscription ID ("txnid" field) is invalid';
 			}
 		}
 
 		/** @var Subscriptions $subscription */
 
-		// Check that receiver_email / receiver_id is what the site owner has configured
 		if ($isValid)
 		{
-			$receiver_email = $data['receiver_email'];
-			$receiver_id = $data['receiver_id'];
-			$valid_id = $this->getMerchantID();
-			$isValid =
-				($receiver_email == $valid_id)
-				|| (strtolower($receiver_email) == strtolower($receiver_email))
-				|| ($receiver_id == $valid_id)
-				|| (strtolower($receiver_id) == strtolower($receiver_id));
-
-			if (!$isValid)
-			{
-				$data['akeebasubs_failure_reason'] = 'Merchant ID does not match receiver_email or receiver_id';
-			}
-		}
-
-		// Check that mc_gross is correct
-		$isPartialRefund = false;
-
-		if ($isValid)
-		{
-			$mc_gross = floatval($data['mc_gross']);
+			$mc_gross = floatval($data['amount']);
 
 			// @todo On recurring subscriptions recalculate the net, tax and gross price by removing the signup fee
 			if ($recurring && ($subscription->recurring_amount >= 0.01))
@@ -226,46 +184,23 @@ class plgAkpaymentPayumoney extends AkpaymentBase
 				// Important: NEVER, EVER compare two floating point values for equality.
 				$isValid = ($gross - $mc_gross) < 0.01;
 			}
-			else
-			{
-				$isPartialRefund = false;
-				$temp_mc_gross = -1 * $mc_gross;
-				$isPartialRefund = ($gross - $temp_mc_gross) > 0.01;
-			}
 
 			if (!$isValid)
 			{
 				$data['akeebasubs_failure_reason'] = 'Paid amount does not match the subscription amount';
 			}
 		}
-
-		// Check that txn_id has not been previously processed
-		if ($isValid && !is_null($subscription) && !$isPartialRefund)
-		{
-			if ($subscription->processor_key == $data['txn_id'])
-			{
-				if ($subscription->state == 'C')
-				{
-					if (strtolower($data['payment_status']) != 'refunded')
-					{
-						$isValid = false;
-						$data['akeebasubs_failure_reason'] = "I will not process the same txn_id twice";
-					}
-				}
-			}
+		
+		//validate the hash
+		if( $isValid &&  isset($data['status']) && isset($data["additionalCharges"])) {
+			$retHashSeq = $data["additionalCharges"].'|'.$this->_salt.'|'.$data['status'].'|||||||||||'.$data['email'].'|'.$data['firstname'].'|'.$data['productinfo'].'|'.$data['amount'].'|'.$data['txnid'].'|'.$data['key'];
+		}else{
+			$retHashSeq = $this->_salt.'|'.$data['status'].'|||||||||||'.$data['email'].'|'.$data['firstname'].'|'.$data['productinfo'].'|'.$data['amount'].'|'.$data['txnid'].'|'.$data['key'];
 		}
-
-		// Check that mc_currency is correct
-		if ($isValid && !is_null($subscription))
-		{
-			$mc_currency = strtoupper($data['mc_currency']);
-			$currency = strtoupper(ComponentParams::getParam('currency', 'EUR'));
-
-			if ($mc_currency != $currency)
-			{
-				$isValid = false;
-				$data['akeebasubs_failure_reason'] = "Invalid currency; expected $currency, got $mc_currency";
-			}
+		$hash = hash("sha512", $retHashSeq);
+		if (!isset($data['hash']) && $hash != $data['hash']) {
+			$isValid = false;
+			$data['akeebasubs_failure_reason'] = JText::_('Hash does not match');
 		}
 
 		// Log the IPN data
@@ -278,19 +213,17 @@ class plgAkpaymentPayumoney extends AkpaymentBase
 		}
 
 		// Check the payment_status
-		switch ($data['payment_status'])
+		switch ($data['status'])
 		{
-			case 'Canceled_Reversal':
-			case 'Completed':
+			case 'success':
 				$newStatus = 'C';
 				break;
 
-			case 'Created':
-			case 'Pending':
-			case 'Processed':
+			case 'pending':			
 				$newStatus = 'P';
 				break;
 
+			case 'failure':
 			case 'Denied':
 			case 'Expired':
 			case 'Failed':
@@ -298,36 +231,17 @@ class plgAkpaymentPayumoney extends AkpaymentBase
 			case 'Reversed':
 			case 'Voided':
 			default:
-				// Partial refunds can only by issued by the merchant. In that case,
-				// we don't want the subscription to be cancelled. We have to let the
-				// merchant adjust its parameters if needed.
-				if ($isPartialRefund)
-				{
-					$newStatus = 'C';
-				}
-				else
-				{
-					$newStatus = 'X';
-				}
+				$newStatus = 'X';
 				break;
 		}
 
 		// Update subscription status (this also automatically calls the plugins)
 		$updates = array(
 			'akeebasubs_subscription_id' => $id,
-			'processor_key'              => $data['txn_id'],
+			'processor_key'              => $data['mihpayid'],
 			'state'                      => $newStatus,
 			'enabled'                    => 0
 		);
-
-		// On recurring payments also store the subscription ID
-		if (array_key_exists('subscr_id', $data))
-		{
-			$subscr_id = $data['subscr_id'];
-			$params = $subscription->params;
-			$params['recurring_id'] = $subscr_id;
-			$updates['params'] = $params;
-		}
 
 		JLoader::import('joomla.utilities.date');
 
@@ -508,57 +422,10 @@ class plgAkpaymentPayumoney extends AkpaymentBase
 	 */
 	private function isValidIPN(&$data)
 	{
-		$sandbox = $this->params->get('sandbox', 0);
-		$hostname = $sandbox ? 'www.sandbox.paypal.com' : 'www.paypal.com';
-
-		$url = 'ssl://' . $hostname;
-		$port = 443;
-
-		$req = 'cmd=_notify-validate';
-		foreach ($data as $key => $value)
-		{
-			$value = urlencode($value);
-			$req .= "&$key=$value";
-		}
-		$header = '';
-		$header .= "POST /cgi-bin/webscr HTTP/1.1\r\n";
-		$header .= "Host: $hostname:$port\r\n";
-		$header .= "Content-Type: application/x-www-form-urlencoded\r\n";
-		$header .= "Content-Length: " . strlen($req) . "\r\n";
-		$header .= "User-Agent: AkeebaSubscriptions\r\n";
-		$header .= "Connection: Close\r\n\r\n";
-
-
-		$fp = fsockopen($url, $port, $errno, $errstr, 30);
-
-		if (!$fp)
-		{
-			// HTTP ERROR
-			$data['akeebasubs_ipncheck_failure'] = 'Could not open SSL connection to ' . $hostname . ':' . $port;
-
+		
+		if(array_key_exists('error_Message', $data)) {
 			return false;
 		}
-		else
-		{
-			fputs($fp, $header . $req);
-
-			while (!feof($fp))
-			{
-				$res = fgets($fp, 1024);
-
-				if (stristr($res, "VERIFIED"))
-				{
-					return true;
-				}
-				else if (stristr($res, "INVALID"))
-				{
-					$data['akeebasubs_ipncheck_failure'] = 'Connected to ' . $hostname . ':' . $port . '; returned data was "INVALID"';
-
-					return false;
-				}
-			}
-
-			fclose($fp);
-		}
+		return true;
 	}
 }
