@@ -10,7 +10,7 @@ defined('_JEXEC') or die();
 use Akeeba\Subscriptions\Admin\Model\Levels;
 use Akeeba\Subscriptions\Admin\Model\Subscriptions;
 use Akeeba\Subscriptions\Admin\PluginAbstracts\AkpaymentBase;
-use Akeeba\Subscriptions\Admin\Helper\ComponentParams;
+
 
 class plgAkpaymentPayumoney extends AkpaymentBase
 {
@@ -72,7 +72,7 @@ class plgAkpaymentPayumoney extends AkpaymentBase
 			'postback'  => $this->getPostbackURL(),
 			'success'   => $rootURL . str_replace('&amp;', '&', JRoute::_('index.php?option=com_akeebasubs&view=Message&slug=' . $slug . '&task=thankyou&subid=' . $subscription->akeebasubs_subscription_id)),
 			'cancel'    => $rootURL . str_replace('&amp;', '&', JRoute::_('index.php?option=com_akeebasubs&view=Message&slug=' . $slug . '&task=cancel&subid=' . $subscription->akeebasubs_subscription_id)),
-			'currency'  => strtoupper(ComponentParams::getParam('currency', 'EUR')),
+			'currency'  => strtoupper($this->container->params->get('currency', 'EUR')),
 			'firstname' => $firstName,
 			'lastname'  => $lastName,
 			'productinfo'  => $level->title,
