@@ -64,13 +64,15 @@ class plgAkpaymentPayumoney extends AkpaymentBase
 			$rootURL = substr($rootURL, 0, -1 * strlen($subpathURL));
 		}
 
+		$success_url = $rootURL . str_replace('&amp;', '&', JRoute::_('index.php?option=com_akeebasubs&view=Message&slug=' . $slug . '&task=thankyou&subid=' . $subscription->akeebasubs_subscription_id));
+
 		$data = (object)array(
 			'url'       => $this->getPaymentURL(),
 			'key'  => $this->getMerchantID(),
 			'txnid'  => $subscription->akeebasubs_subscription_id,
-			'amount' => $subscription->gross_amount,	
+			'amount' => $subscription->gross_amount,
 			'postback'  => $this->getPostbackURL(),
-			'success'   => $rootURL . str_replace('&amp;', '&', JRoute::_('index.php?option=com_akeebasubs&view=Message&slug=' . $slug . '&task=thankyou&subid=' . $subscription->akeebasubs_subscription_id)),
+			'success'   => $success_url,
 			'cancel'    => $rootURL . str_replace('&amp;', '&', JRoute::_('index.php?option=com_akeebasubs&view=Message&slug=' . $slug . '&task=cancel&subid=' . $subscription->akeebasubs_subscription_id)),
 			'currency'  => strtoupper($this->container->params->get('currency', 'EUR')),
 			'firstname' => $firstName,
@@ -90,11 +92,11 @@ class plgAkpaymentPayumoney extends AkpaymentBase
 			$userModel = $this->container->factory->model('Users')->tmpInstance();
 			$kuser = $userModel->user_id($subscription->user_id)->firstOrNew();
 		}
-		
+
 		//generate hash
 		$salt = $this->getSalt();
 		$data->hash=hash('sha512', $data->key.'|'.$data->txnid.'|'.$data->amount.'|'.$data->productinfo.'|'.$data->firstname.'|'.$kuser->email.'|||||||||||'.$salt);
-	
+
 		@ob_start();
 		include dirname(__FILE__) . '/payumoney/form.php';
 		$html = @ob_get_clean();
@@ -119,7 +121,7 @@ class plgAkpaymentPayumoney extends AkpaymentBase
 		{
 			return false;
 		}
-		
+
 		// Check IPN data for validity (i.e. protect against fraud attempt)
 		$isValid = $this->isValidIPN($data);
 
@@ -190,7 +192,7 @@ class plgAkpaymentPayumoney extends AkpaymentBase
 				$data['akeebasubs_failure_reason'] = 'Paid amount does not match the subscription amount';
 			}
 		}
-		
+
 		//validate the hash
 		if( $isValid &&  isset($data['status']) && isset($data["additionalCharges"])) {
 			$retHashSeq = $data["additionalCharges"].'|'.$this->_salt.'|'.$data['status'].'|||||||||||'.$data['email'].'|'.$data['firstname'].'|'.$data['productinfo'].'|'.$data['amount'].'|'.$data['txnid'].'|'.$data['key'];
@@ -219,7 +221,7 @@ class plgAkpaymentPayumoney extends AkpaymentBase
 				$newStatus = 'C';
 				break;
 
-			case 'pending':			
+			case 'pending':
 				$newStatus = 'P';
 				break;
 
@@ -337,7 +339,8 @@ class plgAkpaymentPayumoney extends AkpaymentBase
 		$this->container->platform->runPlugins('onAKAfterPaymentCallback', array(
 			$subscription
 		));
-
+		$success_url = $rootURL . str_replace('&amp;', '&', JRoute::_('index.php?option=com_akeebasubs&view=Message&slug=' . $slug . '&task=thankyou&subid=' . $subscription->akeebasubs_subscription_id));
+		JFactory::getApplication()->redirect($success_url);
 		return true;
 	}
 
@@ -374,14 +377,14 @@ class plgAkpaymentPayumoney extends AkpaymentBase
 			return $this->params->get('merchant', '');
 		}
 	}
-	
+
 	/**
-	 * Gets the Salt 
+	 * Gets the Salt
 	 */
 	private function getSalt()
 	{
 		$sandbox = $this->params->get('sandbox', 0);
-	
+
 		if ($sandbox)
 		{
 			return $this->params->get('sandbox_salt', '');
@@ -422,10 +425,6 @@ class plgAkpaymentPayumoney extends AkpaymentBase
 	 */
 	private function isValidIPN(&$data)
 	{
-		
-		if(array_key_exists('error_Message', $data)) {
-			return false;
-		}
 		return true;
 	}
 }
